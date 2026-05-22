@@ -1,0 +1,15 @@
+name: Teaming
+main: Teaming\Main
+version: 1.0.0
+api: 5.0.0
+author: ZyberPE
+
+commands:
+  team:
+    description: Team system
+    usage: "/team help"
+    permission: teaming.command
+
+permissions:
+  teaming.command:
+    default: true
