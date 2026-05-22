@@ -1,34 +1,49 @@
+max-team-size: 5
+
 chat:
   enabled: true
-
-  # {TEAM} = Team Name
-  # {PLAYER} = Player Name
-  # {MESSAGE} = Message
   format: "§8[§bTeam§8] §7[{TEAM}] §f{PLAYER} §8» §b{MESSAGE}"
 
 nametag:
   enabled: true
-  format: "§b[{TEAM}] §f{PLAYER}"
-
-chat-format:
-  enabled: true
-  format: "§b[{TEAM}] §r{MESSAGE}"
+  format: "§8[§b{TEAM}§8] §f{PLAYER}"
 
 messages:
   prefix: "§8[§bTeaming§8] §r"
 
   no-team: "§cYou are not in a team."
   already-team: "§cYou are already in a team."
-  team-created: "§aTeam successfully created."
+  team-created: "§aTeam created successfully."
   team-exists: "§cThat team already exists."
+
   invite-sent: "§aInvite sent to {PLAYER}."
   invited: "§eYou were invited to team §b{TEAM} §euse §a/team accept"
+
   joined-team: "§aYou joined team §b{TEAM}"
   left-team: "§cYou left your team."
-  team-deleted: "§cTeam deleted."
+
   delete-warning: "§cRun /team deleteconfirm to delete your team."
+  team-deleted: "§cTeam deleted."
+
   no-invite: "§cYou have no pending invites."
   player-not-found: "§cPlayer not found."
+
   friendly-fire: "§cYou cannot hurt your teammate."
+
   toggled-chat-on: "§aTeam chat enabled."
   toggled-chat-off: "§cTeam chat disabled."
+
+  leader-cannot-leave: "§cYou are the team leader. Delete the team instead."
+
+  kicked-player: "§cYou kicked {PLAYER} from the team."
+  kicked-message: "§cYou were kicked from your team."
+
+  team-full: "§cThat team is full."
+
+  team-list-header: "§8===== §bTeam Members §8====="
+  team-list-format: "§7- §b{PLAYER}"
+
+  home-set: "§aTeam home has been set."
+  home-teleport: "§aTeleported to team home."
+  no-home: "§cYour team does not have a home set."
+  not-leader: "§cOnly the team leader can do this."
