@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Teaming;
 
 use pocketmine\player\Player;
+use pocketmine\world\Position;
 
 class TeamManager{
 
@@ -14,6 +15,7 @@ class TeamManager{
     private array $playerTeams = [];
     private array $owners = [];
     private array $invites = [];
+    private array $homes = [];
 
     public function __construct(Main $plugin){
         $this->plugin = $plugin;
@@ -21,12 +23,12 @@ class TeamManager{
 
     public function createTeam(Player $player, string $team) : string{
 
-        if(isset($this->playerTeams[strtolower($player->getName())])){
-            return "already";
+        if(isset($this->teams[$team])){
+            return "team-exists";
         }
 
-        if(isset($this->teams[$team])){
-            return "exists";
+        if($this->hasTeam($player->getName())){
+            return "already-team";
         }
 
         $this->teams[$team] = [strtolower($player->getName())];
@@ -40,8 +42,21 @@ class TeamManager{
         return "success";
     }
 
-    public function invite(Player $owner, Player $target) : void{
+    public function invite(Player $owner, Player $target) : string{
+
+        $team = $this->getTeam($owner->getName());
+
+        if($team === null){
+            return "no-team";
+        }
+
+        if(count($this->teams[$team]) >= $this->plugin->getConfig()->get("max-team-size")){
+            return "team-full";
+        }
+
         $this->invites[strtolower($target->getName())] = strtolower($owner->getName());
+
+        return "success";
     }
 
     public function acceptInvite(Player $player) : bool{
@@ -54,10 +69,6 @@ class TeamManager{
 
         $owner = $this->invites[$name];
 
-        if(!isset($this->playerTeams[$owner])){
-            return false;
-        }
-
         $team = $this->playerTeams[$owner];
 
         $this->teams[$team][] = $name;
@@ -66,16 +77,14 @@ class TeamManager{
 
         unset($this->invites[$name]);
 
+        $this->updateNameTag($player);
+
         return true;
     }
 
     public function leaveTeam(Player $player) : void{
 
         $name = strtolower($player->getName());
-
-        if(!isset($this->playerTeams[$name])){
-            return;
-        }
 
         $team = $this->playerTeams[$name];
 
@@ -93,10 +102,6 @@ class TeamManager{
 
         $team = $this->getTeam($player->getName());
 
-        if($team === null){
-            return;
-        }
-
         foreach($this->playerTeams as $member => $memberTeam){
 
             if($memberTeam === $team){
@@ -113,6 +118,64 @@ class TeamManager{
 
         unset($this->teams[$team]);
         unset($this->owners[$team]);
+        unset($this->homes[$team]);
+    }
+
+    public function kickPlayer(Player $leader, Player $target) : bool{
+
+        if(!$this->isOwner($leader->getName())){
+            return false;
+        }
+
+        if(!$this->sameTeam($leader->getName(), $target->getName())){
+            return false;
+        }
+
+        $name = strtolower($target->getName());
+
+        $team = $this->playerTeams[$name];
+
+        unset($this->playerTeams[$name]);
+
+        $this->teams[$team] = array_filter(
+            $this->teams[$team],
+            fn(string $member) => $member !== $name
+        );
+
+        $target->setNameTag($target->getName());
+
+        return true;
+    }
+
+    public function getMembers(Player $player) : array{
+
+        $team = $this->getTeam($player->getName());
+
+        if($team === null){
+            return [];
+        }
+
+        return $this->teams[$team];
+    }
+
+    public function setHome(Player $player) : void{
+
+        $team = $this->getTeam($player->getName());
+
+        $this->homes[$team] = $player->getPosition();
+    }
+
+    public function teleportHome(Player $player) : bool{
+
+        $team = $this->getTeam($player->getName());
+
+        if(!isset($this->homes[$team])){
+            return false;
+        }
+
+        $player->teleport($this->homes[$team]);
+
+        return true;
     }
 
     public function hasTeam(string $player) : bool{
@@ -144,13 +207,16 @@ class TeamManager{
 
     public function updateNameTag(Player $player) : void{
 
-        if(!$this->plugin->getConfig()->getNested("nametag.enabled")){
-            return;
-        }
+        $health = (int) round($player->getHealth());
 
         $team = $this->getTeam($player->getName());
 
         if($team === null){
+
+            $player->setNameTag(
+                "§a{$health} HP\n§f" . $player->getName()
+            );
+
             return;
         }
 
@@ -162,6 +228,8 @@ class TeamManager{
             $format
         );
 
-        $player->setNameTag($tag);
+        $player->setNameTag(
+            $tag . "\n§a{$health} HP"
+        );
     }
 }
