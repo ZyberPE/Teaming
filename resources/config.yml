@@ -1,0 +1,34 @@
+chat:
+  enabled: true
+
+  # {TEAM} = Team Name
+  # {PLAYER} = Player Name
+  # {MESSAGE} = Message
+  format: "§8[§bTeam§8] §7[{TEAM}] §f{PLAYER} §8» §b{MESSAGE}"
+
+nametag:
+  enabled: true
+  format: "§b[{TEAM}] §f{PLAYER}"
+
+chat-format:
+  enabled: true
+  format: "§b[{TEAM}] §r{MESSAGE}"
+
+messages:
+  prefix: "§8[§bTeaming§8] §r"
+
+  no-team: "§cYou are not in a team."
+  already-team: "§cYou are already in a team."
+  team-created: "§aTeam successfully created."
+  team-exists: "§cThat team already exists."
+  invite-sent: "§aInvite sent to {PLAYER}."
+  invited: "§eYou were invited to team §b{TEAM} §euse §a/team accept"
+  joined-team: "§aYou joined team §b{TEAM}"
+  left-team: "§cYou left your team."
+  team-deleted: "§cTeam deleted."
+  delete-warning: "§cRun /team deleteconfirm to delete your team."
+  no-invite: "§cYou have no pending invites."
+  player-not-found: "§cPlayer not found."
+  friendly-fire: "§cYou cannot hurt your teammate."
+  toggled-chat-on: "§aTeam chat enabled."
+  toggled-chat-off: "§cTeam chat disabled."
