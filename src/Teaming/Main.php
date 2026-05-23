@@ -28,9 +28,35 @@ class Main extends PluginBase implements Listener{
 
         $this->saveDefaultConfig();
 
+        @mkdir($this->getDataFolder());
+
         $this->teamManager = new TeamManager($this);
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
+
+        /*
+         Force nametag override every second
+        */
+
+        $this->getScheduler()->scheduleRepeatingTask(
+            new class($this) extends Task{
+
+                private Main $plugin;
+
+                public function __construct(Main $plugin){
+                    $this->plugin = $plugin;
+                }
+
+                public function onRun() : void{
+
+                    foreach($this->plugin->getServer()->getOnlinePlayers() as $player){
+
+                        $this->plugin->getTeamManager()->updateNameTag($player);
+                    }
+                }
+            },
+            20
+        );
     }
 
     public function getTeamManager() : TeamManager{
@@ -39,6 +65,10 @@ class Main extends PluginBase implements Listener{
 
     public function msg(string $path) : string{
         return $this->getConfig()->getNested("messages." . $path);
+    }
+
+    public function onDisable() : void{
+        $this->teamManager->saveData();
     }
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args) : bool{
@@ -113,12 +143,25 @@ class Main extends PluginBase implements Listener{
 
             case "leave":
 
+                if(!$this->teamManager->hasTeam($sender->getName())){
+                    $sender->sendMessage($this->msg("no-team"));
+                    return true;
+                }
+
                 if($this->teamManager->isOwner($sender->getName())){
                     $sender->sendMessage($this->msg("leader-cannot-leave"));
                     return true;
                 }
 
                 $this->teamManager->leaveTeam($sender);
+
+                $sender->sendMessage(
+                    str_replace(
+                        "{PLAYER}",
+                        $sender->getName(),
+                        $this->msg("left-team")
+                    )
+                );
 
             break;
 
@@ -246,7 +289,9 @@ class Main extends PluginBase implements Listener{
         }
 
         if($this->teamManager->sameTeam($damager->getName(), $entity->getName())){
+
             $event->cancel();
+
             $damager->sendMessage($this->msg("friendly-fire"));
         }
     }
