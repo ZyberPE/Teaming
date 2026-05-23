@@ -56,6 +56,14 @@ class TeamManager{
 
         $this->invites[strtolower($target->getName())] = strtolower($owner->getName());
 
+        $target->sendMessage(
+            str_replace(
+                ["{TEAM}", "{PLAYER}"],
+                [$team, $owner->getName()],
+                $this->plugin->msg("invited")
+            )
+        );
+
         return "success";
     }
 
@@ -79,6 +87,22 @@ class TeamManager{
 
         $this->updateNameTag($player);
 
+        foreach($this->teams[$team] as $member){
+
+            $online = $this->plugin->getServer()->getPlayerExact($member);
+
+            if($online !== null){
+
+                $online->sendMessage(
+                    str_replace(
+                        "{PLAYER}",
+                        $player->getName(),
+                        $this->plugin->msg("joined-team")
+                    )
+                );
+            }
+        }
+
         return true;
     }
 
@@ -94,6 +118,22 @@ class TeamManager{
             $this->teams[$team],
             fn(string $member) => $member !== $name
         );
+
+        foreach($this->teams[$team] as $member){
+
+            $online = $this->plugin->getServer()->getPlayerExact($member);
+
+            if($online !== null){
+
+                $online->sendMessage(
+                    str_replace(
+                        "{PLAYER}",
+                        $player->getName(),
+                        $this->plugin->msg("left-team")
+                    )
+                );
+            }
+        }
 
         $player->setNameTag($player->getName());
     }
@@ -142,6 +182,24 @@ class TeamManager{
             fn(string $member) => $member !== $name
         );
 
+        foreach($this->teams[$team] as $member){
+
+            $online = $this->plugin->getServer()->getPlayerExact($member);
+
+            if($online !== null){
+
+                $online->sendMessage(
+                    str_replace(
+                        "{PLAYER}",
+                        $target->getName(),
+                        $this->plugin->msg("kicked-player")
+                    )
+                );
+            }
+        }
+
+        $target->sendMessage($this->plugin->msg("kicked-message"));
+
         $target->setNameTag($target->getName());
 
         return true;
@@ -151,18 +209,11 @@ class TeamManager{
 
         $team = $this->getTeam($player->getName());
 
-        if($team === null){
-            return [];
-        }
-
-        return $this->teams[$team];
+        return $this->teams[$team] ?? [];
     }
 
     public function setHome(Player $player) : void{
-
-        $team = $this->getTeam($player->getName());
-
-        $this->homes[$team] = $player->getPosition();
+        $this->homes[$this->getTeam($player->getName())] = $player->getPosition();
     }
 
     public function teleportHome(Player $player) : bool{
@@ -198,11 +249,7 @@ class TeamManager{
 
         $team = $this->getTeam($player);
 
-        if($team === null){
-            return false;
-        }
-
-        return $this->owners[$team] === strtolower($player);
+        return $team !== null && $this->owners[$team] === strtolower($player);
     }
 
     public function updateNameTag(Player $player) : void{
