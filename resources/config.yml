@@ -6,7 +6,10 @@ chat:
 
 nametag:
   enabled: true
-  format: "§8[§b{TEAM}§8] §f{PLAYER}"
+
+  team-format: "§8[§b{TEAM}§8] §f{PLAYER}"
+
+  no-team-format: "§7[§8NoTeam§7] §f{PLAYER}"
 
 messages:
   no-team: "§cYou are not in a team."
