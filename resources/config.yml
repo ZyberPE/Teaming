@@ -27,6 +27,7 @@ messages:
   left-team: "§c{PLAYER} left the team."
   kicked-player: "§c{PLAYER} was kicked from the team."
   kicked-message: "§cYou were kicked from the team."
+  cannot-kick-self: "§cYou cannot kick yourself. Use /team delete instead."
   delete-warning: "§cRun /team deleteconfirm to delete your team."
   team-deleted: "§cTeam deleted."
   no-invite: "§cYou have no pending invites."
