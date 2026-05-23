@@ -67,6 +67,18 @@ class Main extends PluginBase implements Listener{
         return $this->getConfig()->getNested("messages." . $path);
     }
 
+    /*
+     DISABLE TEAM CHAT
+    */
+
+    public function disableTeamChat(Player $player) : void{
+
+        if(isset($this->teamChat[$player->getName()])){
+
+            unset($this->teamChat[$player->getName()]);
+        }
+    }
+
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args) : bool{
 
         if(!$sender instanceof Player){
@@ -283,168 +295,5 @@ class Main extends PluginBase implements Listener{
         $player->sendMessage("§b/team kick <player>");
         $player->sendMessage("§b/team list");
         $player->sendMessage("§b/team chat");
-    }
-
-    public function onDamage(EntityDamageByEntityEvent $event) : void{
-
-        $damager = $event->getDamager();
-        $entity = $event->getEntity();
-
-        if(!$damager instanceof Player || !$entity instanceof Player){
-            return;
-        }
-
-        if($this->teamManager->sameTeam(
-            $damager->getName(),
-            $entity->getName()
-        )){
-
-            $event->cancel();
-
-            $damager->sendMessage(
-                $this->msg("friendly-fire")
-            );
-        }
-    }
-
-    public function onChat(PlayerChatEvent $event) : void{
-
-        if(!$this->getConfig()->getNested("chat.enabled")){
-            return;
-        }
-
-        $player = $event->getPlayer();
-        $message = $event->getMessage();
-
-        $event->cancel();
-
-        $team = $this->teamManager->getTeam(
-            $player->getName()
-        );
-
-        $rank = "";
-
-        $pureChat = $this->getServer()
-            ->getPluginManager()
-            ->getPlugin("PureChat");
-
-        if($pureChat instanceof PureChat){
-
-            try{
-                $rank = $pureChat->getNametag($player);
-            }catch(\Throwable $e){
-                $rank = "";
-            }
-        }
-
-        /*
-         TEAM CHAT
-        */
-
-        if(isset($this->teamChat[$player->getName()])){
-
-            if($team === null){
-                return;
-            }
-
-            $format = $this->getConfig()->getNested(
-                "chat.team-chat-format"
-            );
-
-            $formatted = str_replace(
-                ["{TEAM}", "{PLAYER}", "{MESSAGE}", "{RANK}"],
-                [$team, $player->getName(), $message, $rank],
-                $format
-            );
-
-            foreach($this->getServer()->getOnlinePlayers() as $online){
-
-                if($this->teamManager->sameTeam(
-                    $player->getName(),
-                    $online->getName()
-                )){
-                    $online->sendMessage($formatted);
-                }
-            }
-
-            return;
-        }
-
-        /*
-         PUBLIC CHAT
-        */
-
-        if($team !== null){
-
-            $format = $this->getConfig()->getNested(
-                "chat.public-chat-format"
-            );
-
-            $formatted = str_replace(
-                ["{TEAM}", "{PLAYER}", "{MESSAGE}", "{RANK}"],
-                [$team, $player->getName(), $message, $rank],
-                $format
-            );
-
-        }else{
-
-            $format = $this->getConfig()->getNested(
-                "chat.no-team-public-chat-format"
-            );
-
-            $formatted = str_replace(
-                ["{PLAYER}", "{MESSAGE}", "{RANK}"],
-                [$player->getName(), $message, $rank],
-                $format
-            );
-        }
-
-        foreach($this->getServer()->getOnlinePlayers() as $online){
-            $online->sendMessage($formatted);
-        }
-    }
-
-    public function onJoin(PlayerJoinEvent $event) : void{
-
-        $this->teamManager->updateNameTag(
-            $event->getPlayer()
-        );
-    }
-
-    public function onHealthUpdate(
-        EntityDamageEvent|EntityRegainHealthEvent $event
-    ) : void{
-
-        $entity = $event->getEntity();
-
-        if(!$entity instanceof Player){
-            return;
-        }
-
-        $this->getScheduler()->scheduleDelayedTask(
-
-            new class($this, $entity) extends Task{
-
-                private Main $plugin;
-                private Player $player;
-
-                public function __construct(Main $plugin, Player $player){
-
-                    $this->plugin = $plugin;
-                    $this->player = $player;
-                }
-
-                public function onRun() : void{
-
-                    if($this->player->isOnline()){
-
-                        $this->plugin
-                            ->getTeamManager()
-                            ->updateNameTag($this->player);
-                    }
-                }
-            },
-            1
-        );
     }
 }
