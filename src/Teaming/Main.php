@@ -34,10 +34,6 @@ class Main extends PluginBase implements Listener{
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
 
-        /*
-         Override nametags every second
-        */
-
         $this->getScheduler()->scheduleRepeatingTask(
             new class($this) extends Task{
 
@@ -70,10 +66,6 @@ class Main extends PluginBase implements Listener{
     public function onDisable() : void{
         $this->teamManager->saveData();
     }
-
-    /*
-     TEAM COMMANDS
-    */
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args) : bool{
 
@@ -202,9 +194,7 @@ class Main extends PluginBase implements Listener{
                     return true;
                 }
 
-                if(!$this->teamManager->kickPlayer($sender, $target)){
-                    $sender->sendMessage($this->msg("not-leader"));
-                }
+                $this->teamManager->kickPlayer($sender, $target);
 
             break;
 
@@ -261,10 +251,6 @@ class Main extends PluginBase implements Listener{
         return true;
     }
 
-    /*
-     HELP MENU
-    */
-
     public function sendHelp(Player $player) : void{
 
         $player->sendMessage("§8===== §bTeam Help §8=====");
@@ -279,158 +265,5 @@ class Main extends PluginBase implements Listener{
         $player->sendMessage("§b/team sethome");
         $player->sendMessage("§b/team home");
         $player->sendMessage("§b/team chat");
-    }
-
-    /*
-     Friendly fire
-    */
-
-    public function onDamage(EntityDamageByEntityEvent $event) : void{
-
-        $damager = $event->getDamager();
-        $entity = $event->getEntity();
-
-        if(!$damager instanceof Player || !$entity instanceof Player){
-            return;
-        }
-
-        if($this->teamManager->sameTeam($damager->getName(), $entity->getName())){
-
-            $event->cancel();
-
-            $damager->sendMessage($this->msg("friendly-fire"));
-        }
-    }
-
-    /*
-     CHAT OVERRIDE
-    */
-
-    public function onChat(PlayerChatEvent $event) : void{
-
-        $player = $event->getPlayer();
-
-        $event->cancel();
-
-        $message = $event->getMessage();
-
-        $rank = "";
-
-        $pureChat = $this->getServer()->getPluginManager()->getPlugin("PureChat");
-
-        if($pureChat instanceof PureChat){
-            $rank = $pureChat->getNametag($player);
-        }
-
-        /*
-         TEAM CHAT
-        */
-
-        if(isset($this->teamChat[$player->getName()])){
-
-            if(!$this->teamManager->hasTeam($player->getName())){
-                return;
-            }
-
-            $team = $this->teamManager->getTeam($player->getName());
-
-            $format = $this->getConfig()->getNested(
-                "chat.team-chat-format"
-            );
-
-            $formatted = str_replace(
-                ["{TEAM}", "{PLAYER}", "{MESSAGE}", "{RANK}"],
-                [$team, $player->getName(), $message, $rank],
-                $format
-            );
-
-            foreach($this->getServer()->getOnlinePlayers() as $online){
-
-                if($this->teamManager->sameTeam(
-                    $player->getName(),
-                    $online->getName()
-                )){
-                    $online->sendMessage($formatted);
-                }
-            }
-
-            return;
-        }
-
-        /*
-         PUBLIC CHAT
-        */
-
-        if($this->teamManager->hasTeam($player->getName())){
-
-            $team = $this->teamManager->getTeam($player->getName());
-
-            $format = $this->getConfig()->getNested(
-                "chat.public-chat-format"
-            );
-
-            $formatted = str_replace(
-                ["{TEAM}", "{PLAYER}", "{MESSAGE}", "{RANK}"],
-                [$team, $player->getName(), $message, $rank],
-                $format
-            );
-
-        }else{
-
-            $format = $this->getConfig()->getNested(
-                "chat.no-team-public-chat-format"
-            );
-
-            $formatted = str_replace(
-                ["{PLAYER}", "{MESSAGE}", "{RANK}"],
-                [$player->getName(), $message, $rank],
-                $format
-            );
-        }
-
-        foreach($this->getServer()->getOnlinePlayers() as $online){
-            $online->sendMessage($formatted);
-        }
-    }
-
-    /*
-     Update nametag
-    */
-
-    public function onJoin(PlayerJoinEvent $event) : void{
-        $this->teamManager->updateNameTag($event->getPlayer());
-    }
-
-    /*
-     Update HP nametag
-    */
-
-    public function onHealthUpdate(EntityDamageEvent|EntityRegainHealthEvent $event) : void{
-
-        $entity = $event->getEntity();
-
-        if($entity instanceof Player){
-
-            $this->getScheduler()->scheduleDelayedTask(
-                new class($this, $entity) extends Task{
-
-                    private Main $plugin;
-                    private Player $player;
-
-                    public function __construct(Main $plugin, Player $player){
-                        $this->plugin = $plugin;
-                        $this->player = $player;
-                    }
-
-                    public function onRun() : void{
-
-                        if($this->player->isOnline()){
-                            $this->plugin->getTeamManager()->updateNameTag($this->player);
-                        }
-                    }
-                },
-                1
-            );
-        }
     }
 }
