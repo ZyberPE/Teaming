@@ -2,7 +2,12 @@ max-team-size: 5
 
 chat:
   enabled: true
-  format: "§8[§bTeam§8] §7[{TEAM}] {RANK} §f{PLAYER} §8» §b{MESSAGE}"
+
+  public-chat-format: "§8[§7{TEAM}§8] {RANK} §f{PLAYER} §8» §7{MESSAGE}"
+
+  no-team-public-chat-format: "§8[§7NoTeam§8] {RANK} §f{PLAYER} §8» §7{MESSAGE}"
+
+  team-chat-format: "§8[§bTEAM CHAT§8] §7[{TEAM}] {RANK} §f{PLAYER} §8» §b{MESSAGE}"
 
 nametag:
   enabled: true
