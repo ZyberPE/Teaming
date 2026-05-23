@@ -43,7 +43,6 @@ class Main extends PluginBase implements Listener{
     }
 
     public function disableTeamChat(Player $player) : void{
-
         unset($this->teamChat[$player->getName()]);
     }
 
@@ -161,63 +160,55 @@ class Main extends PluginBase implements Listener{
 
             case "kick":
 
-    if(!isset($args[1])){
+                if(!isset($args[1])){
 
-        $sender->sendMessage(
-            "§cUsage: /team kick <player>"
-        );
+                    $sender->sendMessage(
+                        "§cUsage: /team kick <player>"
+                    );
 
-        return true;
-    }
+                    return true;
+                }
 
-    $target = $this->getServer()->getPlayerByPrefix(
-        $args[1]
-    );
+                $target = $this->getServer()->getPlayerByPrefix(
+                    $args[1]
+                );
 
-    /*
-     PLAYER OFFLINE
-    */
+                if($target === null){
 
-    if($target === null){
+                    $exact = $this->getServer()->getPlayerExact(
+                        $args[1]
+                    );
 
-        $exact = $this->getServer()->getPlayerExact(
-            $args[1]
-        );
+                    if($exact === null){
 
-        if($exact === null){
+                        $sender->sendMessage(
+                            $this->msg("player-offline-full-name")
+                        );
 
-            $sender->sendMessage(
-                $this->msg("player-offline-full-name")
-            );
+                        return true;
+                    }
 
-            return true;
-        }
+                    $target = $exact;
+                }
 
-        $target = $exact;
-    }
+                if(!$this->teamManager->sameTeam(
+                    $sender->getName(),
+                    $target->getName()
+                )){
 
-    /*
-     NOT SAME TEAM
-    */
+                    $sender->sendMessage(
+                        $this->msg("player-not-in-your-team")
+                    );
 
-    if(!$this->teamManager->sameTeam(
-        $sender->getName(),
-        $target->getName()
-    )){
+                    return true;
+                }
 
-        $sender->sendMessage(
-            $this->msg("player-not-in-your-team")
-        );
+                $this->teamManager->kickPlayer(
+                    $sender,
+                    $target
+                );
 
-        return true;
-    }
-
-    $this->teamManager->kickPlayer(
-        $sender,
-        $target
-    );
-
-break;
+            break;
 
             case "chat":
 
