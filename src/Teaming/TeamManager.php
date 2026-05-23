@@ -6,7 +6,7 @@ namespace Teaming;
 
 use pocketmine\player\Player;
 use pocketmine\utils\Config;
-use pocketmine\world\Position;
+use _64FF00\PureChat\PureChat;
 
 class TeamManager{
 
@@ -229,38 +229,89 @@ class TeamManager{
 
     public function updateNameTag(Player $player) : void{
 
-        if(!$this->plugin->getConfig()->getNested("nametag.enabled")){
+        if(!$this->plugin->getConfig()->getNested(
+            "nametag.enabled"
+        )){
             return;
         }
 
-        $team = $this->getTeam($player->getName());
+        $team = $this->getTeam(
+            $player->getName()
+        );
 
-        $health = round($player->getHealth());
+        $health = round(
+            $player->getHealth()
+        );
+
+        $rank = "";
+
+        $pureChat = $this->plugin
+            ->getServer()
+            ->getPluginManager()
+            ->getPlugin("PureChat");
+
+        if($pureChat instanceof PureChat){
+
+            try{
+
+                $rank = $pureChat->getNametag(
+                    $player
+                );
+
+            }catch(\Throwable $e){
+
+                $rank = "";
+            }
+        }
 
         if($team !== null){
 
-            $format = $this->plugin->getConfig()->getNested(
-                "nametag.team-format"
-            );
+            $format = $this->plugin
+                ->getConfig()
+                ->getNested(
+                    "nametag.team-format"
+                );
 
             $tag = str_replace(
-                ["{TEAM}", "{PLAYER}", "{HEALTH}"],
-                [$team, $player->getName(), $health],
+                [
+                    "{TEAM}",
+                    "{PLAYER}",
+                    "{HEALTH}",
+                    "{RANK}"
+                ],
+                [
+                    $team,
+                    $player->getName(),
+                    $health,
+                    $rank
+                ],
                 $format
             );
 
         }else{
 
-            $format = $this->plugin->getConfig()->getNested(
-                "nametag.no-team-format"
-            );
+            $format = $this->plugin
+                ->getConfig()
+                ->getNested(
+                    "nametag.no-team-format"
+                );
 
             $tag = str_replace(
-                ["{PLAYER}", "{HEALTH}"],
-                [$player->getName(), $health],
+                [
+                    "{PLAYER}",
+                    "{HEALTH}",
+                    "{RANK}"
+                ],
+                [
+                    $player->getName(),
+                    $health,
+                    $rank
+                ],
                 $format
             );
         }
+
+        $player->setNameTagAlwaysVisible(true);
 
         $player->setNameTag($tag);
     }
