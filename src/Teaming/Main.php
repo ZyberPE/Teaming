@@ -6,15 +6,16 @@ namespace Teaming;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\event\entity\EntityDamageByEntityEvent;
-use pocketmine\event\entity\EntityDamageEvent;
-use pocketmine\event\entity\EntityRegainHealthEvent;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\event\entity\EntityRegainHealthEvent;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
 use pocketmine\scheduler\Task;
+use _64FF00\PureChat\PureChat;
 
 class Main extends PluginBase implements Listener{
 
@@ -62,7 +63,6 @@ class Main extends PluginBase implements Listener{
             case "create":
 
                 if(!isset($args[1])){
-                    $sender->sendMessage("§cUsage: /team create <name>");
                     return true;
                 }
 
@@ -107,14 +107,7 @@ class Main extends PluginBase implements Listener{
 
                 if(!$this->teamManager->acceptInvite($sender)){
                     $sender->sendMessage($this->msg("no-invite"));
-                    return true;
                 }
-
-                $sender->sendMessage(
-                    str_replace("{TEAM}",
-                    $this->teamManager->getTeam($sender->getName()),
-                    $this->msg("joined-team"))
-                );
 
             break;
 
@@ -126,8 +119,6 @@ class Main extends PluginBase implements Listener{
                 }
 
                 $this->teamManager->leaveTeam($sender);
-
-                $sender->sendMessage($this->msg("left-team"));
 
             break;
 
@@ -146,15 +137,14 @@ class Main extends PluginBase implements Listener{
 
             case "deleteconfirm":
 
-                if(!isset($this->deleteConfirm[$sender->getName()])){
-                    return true;
+                if(isset($this->deleteConfirm[$sender->getName()])){
+
+                    $this->teamManager->deleteTeam($sender);
+
+                    unset($this->deleteConfirm[$sender->getName()]);
+
+                    $sender->sendMessage($this->msg("team-deleted"));
                 }
-
-                $this->teamManager->deleteTeam($sender);
-
-                unset($this->deleteConfirm[$sender->getName()]);
-
-                $sender->sendMessage($this->msg("team-deleted"));
 
             break;
 
@@ -173,28 +163,31 @@ class Main extends PluginBase implements Listener{
 
                 if(!$this->teamManager->kickPlayer($sender, $target)){
                     $sender->sendMessage($this->msg("not-leader"));
-                    return true;
                 }
-
-                $sender->sendMessage(
-                    str_replace("{PLAYER}", $target->getName(), $this->msg("kicked-player"))
-                );
-
-                $target->sendMessage($this->msg("kicked-message"));
 
             break;
 
             case "list":
 
-                $members = $this->teamManager->getMembers($sender);
+                foreach($this->teamManager->getMembers($sender) as $member){
+                    $sender->sendMessage("§b- " . $member);
+                }
 
-                $sender->sendMessage($this->msg("team-list-header"));
+            break;
 
-                foreach($members as $member){
+            case "chat":
 
-                    $sender->sendMessage(
-                        str_replace("{PLAYER}", $member, $this->msg("team-list-format"))
-                    );
+                if(isset($this->teamChat[$sender->getName()])){
+
+                    unset($this->teamChat[$sender->getName()]);
+
+                    $sender->sendMessage($this->msg("toggled-chat-off"));
+
+                }else{
+
+                    $this->teamChat[$sender->getName()] = true;
+
+                    $sender->sendMessage($this->msg("toggled-chat-on"));
                 }
 
             break;
@@ -240,6 +233,7 @@ class Main extends PluginBase implements Listener{
         $player->sendMessage("§b/team list");
         $player->sendMessage("§b/team sethome");
         $player->sendMessage("§b/team home");
+        $player->sendMessage("§b/team chat");
     }
 
     public function onDamage(EntityDamageByEntityEvent $event) : void{
@@ -257,11 +251,51 @@ class Main extends PluginBase implements Listener{
         }
     }
 
+    public function onChat(PlayerChatEvent $event) : void{
+
+        $player = $event->getPlayer();
+
+        if(!isset($this->teamChat[$player->getName()])){
+            return;
+        }
+
+        if(!$this->teamManager->hasTeam($player->getName())){
+            return;
+        }
+
+        $event->cancel();
+
+        $team = $this->teamManager->getTeam($player->getName());
+
+        $rank = "";
+
+        $pureChat = $this->getServer()->getPluginManager()->getPlugin("PureChat");
+
+        if($pureChat instanceof PureChat){
+            $rank = $pureChat->getNametag($player);
+        }
+
+        $format = $this->getConfig()->getNested("chat.format");
+
+        $formatted = str_replace(
+            ["{TEAM}", "{PLAYER}", "{MESSAGE}", "{RANK}"],
+            [$team, $player->getName(), $event->getMessage(), $rank],
+            $format
+        );
+
+        foreach($this->getServer()->getOnlinePlayers() as $online){
+
+            if($this->teamManager->sameTeam($player->getName(), $online->getName())){
+                $online->sendMessage($formatted);
+            }
+        }
+    }
+
     public function onJoin(PlayerJoinEvent $event) : void{
         $this->teamManager->updateNameTag($event->getPlayer());
     }
 
-    public function onHealthChange(EntityDamageEvent|EntityRegainHealthEvent $event) : void{
+    public function onHealthUpdate(EntityDamageEvent|EntityRegainHealthEvent $event) : void{
 
         $entity = $event->getEntity();
 
@@ -279,6 +313,7 @@ class Main extends PluginBase implements Listener{
                     }
 
                     public function onRun() : void{
+
                         if($this->player->isOnline()){
                             $this->plugin->getTeamManager()->updateNameTag($this->player);
                         }
