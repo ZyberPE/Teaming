@@ -161,19 +161,63 @@ class Main extends PluginBase implements Listener{
 
             case "kick":
 
-                if(!isset($args[1])){
-                    return true;
-                }
+    if(!isset($args[1])){
 
-                $target = $this->getServer()->getPlayerByPrefix($args[1]);
+        $sender->sendMessage(
+            "§cUsage: /team kick <player>"
+        );
 
-                if($target === null){
-                    return true;
-                }
+        return true;
+    }
 
-                $this->teamManager->kickPlayer($sender, $target);
+    $target = $this->getServer()->getPlayerByPrefix(
+        $args[1]
+    );
 
-            break;
+    /*
+     PLAYER OFFLINE
+    */
+
+    if($target === null){
+
+        $exact = $this->getServer()->getPlayerExact(
+            $args[1]
+        );
+
+        if($exact === null){
+
+            $sender->sendMessage(
+                $this->msg("player-offline-full-name")
+            );
+
+            return true;
+        }
+
+        $target = $exact;
+    }
+
+    /*
+     NOT SAME TEAM
+    */
+
+    if(!$this->teamManager->sameTeam(
+        $sender->getName(),
+        $target->getName()
+    )){
+
+        $sender->sendMessage(
+            $this->msg("player-not-in-your-team")
+        );
+
+        return true;
+    }
+
+    $this->teamManager->kickPlayer(
+        $sender,
+        $target
+    );
+
+break;
 
             case "chat":
 
