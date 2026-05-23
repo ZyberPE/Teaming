@@ -286,9 +286,25 @@ class Main extends PluginBase implements Listener{
         );
     }
 
-    public function onHealthUpdate(
-        EntityDamageEvent|EntityRegainHealthEvent $event
-    ) : void{
+    public function onDamageHealth(EntityDamageEvent $event) : void{
+
+    $entity = $event->getEntity();
+
+    if($entity instanceof Player){
+
+        $this->teamManager->updateNameTag($entity);
+    }
+}
+
+public function onHealHealth(EntityRegainHealthEvent $event) : void{
+
+    $entity = $event->getEntity();
+
+    if($entity instanceof Player){
+
+        $this->teamManager->updateNameTag($entity);
+    }
+}
 
         $entity = $event->getEntity();
 
