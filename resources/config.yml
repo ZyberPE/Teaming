@@ -12,9 +12,9 @@ chat:
 nametag:
   enabled: true
 
-  team-format: "§8[§b{TEAM}§8] §f{PLAYER}\n§a{HEALTH} HP"
+  team-format: "§8[§b{TEAM}§8]\n{RANK}\n§f{PLAYER}\n§a{HEALTH} HP"
 
-  no-team-format: "§7[§8NoTeam§7] §f{PLAYER}\n§a{HEALTH} HP"
+  no-team-format: "§8[§7NoTeam§8]\n{RANK}\n§f{PLAYER}\n§a{HEALTH} HP"
 
 messages:
   no-team: "§cYou are not in a team."
@@ -35,6 +35,8 @@ messages:
   no-invite: "§cYou have no pending invites."
   player-not-found: "§cPlayer not found."
   player-not-in-team: "§cThat player is not in your team."
+  player-not-in-your-team: "§cThat player is not in your team."
+  player-offline-full-name: "§cPlayer is offline. Type their full exact name."
   friendly-fire: "§cYou cannot hurt your teammate."
   toggled-chat-on: "§aTeam chat enabled."
   toggled-chat-off: "§cTeam chat disabled."
