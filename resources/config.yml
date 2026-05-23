@@ -12,9 +12,9 @@ chat:
 nametag:
   enabled: true
 
-  team-format: "§8[§b{TEAM}§8] §f{PLAYER}"
+  team-format: "§8[§b{TEAM}§8] §f{PLAYER}\n§a{HEALTH} HP"
 
-  no-team-format: "§7[§8NoTeam§7] §f{PLAYER}"
+  no-team-format: "§7[§8NoTeam§7] §f{PLAYER}\n§a{HEALTH} HP"
 
 messages:
   no-team: "§cYou are not in a team."
