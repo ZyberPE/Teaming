@@ -1,25 +1,16 @@
 max-team-size: 5
-
 broadcasts:
   team-created: "§8[§aTeams§8] §f{PLAYER} created team §b{TEAM}"
   team-deleted: "§8[§cTeams§8] §f{PLAYER} deleted team §c{TEAM}"
-
 chat:
   enabled: true
-
   public-chat-format: "§8[§7{TEAM}§8] {RANK} §f{PLAYER} §8» §7{MESSAGE}"
-
   no-team-public-chat-format: "§8[§7NoTeam§8] {RANK} §f{PLAYER} §8» §7{MESSAGE}"
-
   team-chat-format: "§8[§bTEAM CHAT§8] §7[{TEAM}] {RANK} §f{PLAYER} §8» §b{MESSAGE}"
-
 nametag:
   enabled: true
-
   team-format: "§8[§b{TEAM}§8]\n{RANK}\n§f{PLAYER}\n§a{HEALTH} HP"
-
   no-team-format: "§8[§7NoTeam§8]\n{RANK}\n§f{PLAYER}\n§a{HEALTH} HP"
-
 messages:
   no-team: "§cYou are not in a team."
   already-team: "§cYou are already in a team."
