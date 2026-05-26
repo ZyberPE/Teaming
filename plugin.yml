@@ -1,12 +1,12 @@
 name: Teaming
 main: Teaming\Main
-version: 2.0.1
+version: 2.1.0
 api: 5.0.0
 author: ZyberPE
 
 commands:
   team:
-    description: Team commands
+    description: Team system
     usage: "/team help"
     permission: teaming.use
 
