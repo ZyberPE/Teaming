@@ -6,17 +6,18 @@ namespace Teaming;
 
 use pocketmine\plugin\PluginBase;
 use pocketmine\event\Listener;
+
 use pocketmine\player\Player;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 
-use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerChatEvent;
+use pocketmine\event\player\PlayerJoinEvent;
 
 use pocketmine\event\entity\EntityDamageEvent;
-use pocketmine\event\entity\EntityRegainHealthEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityRegainHealthEvent;
 
 use pocketmine\scheduler\ClosureTask;
 
@@ -64,10 +65,6 @@ class Main extends PluginBase implements Listener{
             }),
             20
         );
-    }
-
-    public function getTeamManager() : TeamManager{
-        return $this->teamManager;
     }
 
     public function onJoin(PlayerJoinEvent $event) : void{
@@ -129,17 +126,9 @@ class Main extends PluginBase implements Listener{
                 )
             );
         }
-
-        $this->teamManager
-            ->updateNameTag($damager);
-
-        $this->teamManager
-            ->updateNameTag($entity);
     }
 
-    public function onChat(
-        PlayerChatEvent $event
-    ) : void{
+    public function onChat(PlayerChatEvent $event) : void{
 
         if(
             !$this->getConfig()
@@ -199,13 +188,6 @@ class Main extends PluginBase implements Listener{
                             $player->getName()
                         )
                     ]
-                );
-
-                $player->sendMessage(
-                    $this->getConfig()
-                        ->getNested(
-                            "messages.not-in-team-chat"
-                        )
                 );
 
                 return;
@@ -309,9 +291,7 @@ class Main extends PluginBase implements Listener{
 
         if(!isset($args[0])){
 
-            $sender->sendMessage(
-                "§e/team help"
-            );
+            $sender->sendMessage("§e/team help");
 
             return true;
         }
@@ -323,13 +303,13 @@ class Main extends PluginBase implements Listener{
                 $sender->sendMessage("§6----- Team Help -----");
                 $sender->sendMessage("§e/team create <name>");
                 $sender->sendMessage("§e/team invite <player>");
-                $sender->sendMessage("§e/team join");
+                $sender->sendMessage("§e/team accept");
                 $sender->sendMessage("§e/team leave");
-                $sender->sendMessage("§e/team delete");
-                $sender->sendMessage("§e/team deleteconfirm");
                 $sender->sendMessage("§e/team kick <player>");
                 $sender->sendMessage("§e/team list");
                 $sender->sendMessage("§e/team chat");
+                $sender->sendMessage("§e/team delete");
+                $sender->sendMessage("§e/team deleteconfirm");
                 $sender->sendMessage("§e/team sethome");
                 $sender->sendMessage("§e/team home");
 
@@ -343,9 +323,7 @@ class Main extends PluginBase implements Listener{
 
                 if(
                     $this->teamManager
-                        ->hasTeam(
-                            $sender->getName()
-                        )
+                        ->hasTeam($sender->getName())
                 ){
 
                     $sender->sendMessage(
@@ -400,9 +378,159 @@ class Main extends PluginBase implements Listener{
                 );
 
                 $this->getServer()
-                    ->broadcastMessage(
-                        $broadcast
+                    ->broadcastMessage($broadcast);
+
+            break;
+
+            case "invite":
+
+                if(!isset($args[1])){
+                    return true;
+                }
+
+                if(
+                    !$this->teamManager
+                        ->isLeader($sender->getName())
+                ){
+
+                    $sender->sendMessage(
+                        $this->getConfig()
+                            ->getNested(
+                                "messages.not-leader"
+                            )
                     );
+
+                    return true;
+                }
+
+                $target = $this->getServer()
+                    ->getPlayerByPrefix($args[1]);
+
+                if($target === null){
+
+                    $sender->sendMessage(
+                        $this->getConfig()
+                            ->getNested(
+                                "messages.player-not-found"
+                            )
+                    );
+
+                    return true;
+                }
+
+                $team = $this->teamManager
+                    ->getTeam($sender->getName());
+
+                if($this->teamManager->isFull($team)){
+
+                    $sender->sendMessage(
+                        $this->getConfig()
+                            ->getNested(
+                                "messages.team-full"
+                            )
+                    );
+
+                    return true;
+                }
+
+                $this->teamManager
+                    ->invitePlayer(
+                        $sender,
+                        $target
+                    );
+
+                $sender->sendMessage(
+                    str_replace(
+                        "{PLAYER}",
+                        $target->getName(),
+                        $this->getConfig()
+                            ->getNested(
+                                "messages.invite-sent"
+                            )
+                    )
+                );
+
+                $target->sendMessage(
+                    str_replace(
+                        [
+                            "{TEAM}",
+                            "{PLAYER}"
+                        ],
+                        [
+                            $team,
+                            $sender->getName()
+                        ],
+                        $this->getConfig()
+                            ->getNested(
+                                "messages.invited"
+                            )
+                    )
+                );
+
+            break;
+
+            case "accept":
+
+                if(
+                    !$this->teamManager
+                        ->hasInvite(
+                            $sender->getName()
+                        )
+                ){
+
+                    $sender->sendMessage(
+                        $this->getConfig()
+                            ->getNested(
+                                "messages.no-invite"
+                            )
+                    );
+
+                    return true;
+                }
+
+                $team = $this->teamManager
+                    ->getInviteTeam(
+                        $sender->getName()
+                    );
+
+                if($team === null){
+                    return true;
+                }
+
+                $this->teamManager
+                    ->addMember(
+                        $team,
+                        $sender->getName()
+                    );
+
+                $this->teamManager
+                    ->removeInvite(
+                        $sender->getName()
+                    );
+
+                foreach(
+                    $this->teamManager
+                        ->getMembers($team)
+                    as $member
+                ){
+
+                    $online = $this->getServer()
+                        ->getPlayerExact($member);
+
+                    if($online !== null){
+
+                        $online->sendMessage(
+                            str_replace(
+                                "{PLAYER}",
+                                $sender->getName(),
+                                $this->getConfig()
+                                    ->getNested(
+                                        "messages.joined-team"
+                                    )
+                            )
+                        );
+                    }
+                }
 
             break;
 
@@ -410,9 +538,7 @@ class Main extends PluginBase implements Listener{
 
                 if(
                     !$this->teamManager
-                        ->hasTeam(
-                            $sender->getName()
-                        )
+                        ->hasTeam($sender->getName())
                 ){
 
                     $sender->sendMessage(
