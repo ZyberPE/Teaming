@@ -6,7 +6,6 @@ namespace Teaming;
 
 use pocketmine\player\Player;
 use pocketmine\utils\Config;
-use _64FF00\PureChat\PureChat;
 
 class TeamManager{
 
@@ -29,9 +28,7 @@ class TeamManager{
     }
 
     public function save() : void{
-
         $this->data->setAll($this->teams);
-
         $this->data->save();
     }
 
@@ -43,9 +40,8 @@ class TeamManager{
 
         $this->teams[$team] = [
             "leader" => $player->getName(),
-            "members" => [
-                $player->getName()
-            ]
+            "members" => [$player->getName()],
+            "home" => null
         ];
 
         $this->save();
