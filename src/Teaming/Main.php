@@ -4,26 +4,26 @@ declare(strict_types=1);
 
 namespace Teaming;
 
+use pocketmine\plugin\PluginBase;
+use pocketmine\event\Listener;
+use pocketmine\player\Player;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\EntityRegainHealthEvent;
-use pocketmine\player\Player;
-use pocketmine\plugin\PluginBase;
-use _64FF00\PureChat\PureChat;
 
 class Main extends PluginBase implements Listener{
 
     private TeamManager $teamManager;
 
     private array $teamChat = [];
+
     private array $deleteConfirm = [];
 
-    public function onEnable() : void{
+    protected function onEnable() : void{
 
         @mkdir($this->getDataFolder());
 
@@ -38,15 +38,12 @@ class Main extends PluginBase implements Listener{
         return $this->teamManager;
     }
 
-    public function msg(string $path) : string{
-        return $this->getConfig()->getNested("messages." . $path);
-    }
-
-    public function disableTeamChat(Player $player) : void{
-        unset($this->teamChat[$player->getName()]);
-    }
-
-    public function onCommand(CommandSender $sender, Command $command, string $label, array $args) : bool{
+    public function onCommand(
+        CommandSender $sender,
+        Command $command,
+        string $label,
+        array $args
+    ) : bool{
 
         if(!$sender instanceof Player){
             return true;
@@ -70,73 +67,101 @@ class Main extends PluginBase implements Listener{
                     return true;
                 }
 
-                $result = $this->teamManager->createTeam($sender, $args[1]);
-
-                if($result !== "success"){
-                    $sender->sendMessage($this->msg($result));
+                if($this->teamManager->hasTeam($sender->getName())){
+                    $sender->sendMessage(
+                        $this->getConfig()->getNested(
+                            "messages.already-team"
+                        )
+                    );
                     return true;
                 }
 
-                $sender->sendMessage($this->msg("team-created"));
+                $team = $args[1];
 
-            break;
-
-            case "invite":
-
-                if(!isset($args[1])){
-                    $sender->sendMessage("§cUsage: /team invite <player>");
-                    return true;
-                }
-
-                $target = $this->getServer()->getPlayerByPrefix($args[1]);
-
-                if($target === null){
-                    $sender->sendMessage($this->msg("player-not-found"));
-                    return true;
-                }
-
-                $result = $this->teamManager->invite($sender, $target);
-
-                if($result !== "success"){
-                    $sender->sendMessage($this->msg($result));
+                if(!$this->teamManager->createTeam($sender, $team)){
+                    $sender->sendMessage(
+                        $this->getConfig()->getNested(
+                            "messages.team-exists"
+                        )
+                    );
                     return true;
                 }
 
                 $sender->sendMessage(
-                    str_replace("{PLAYER}", $target->getName(), $this->msg("invite-sent"))
+                    $this->getConfig()->getNested(
+                        "messages.team-created"
+                    )
                 );
 
-            break;
+                $broadcast = str_replace(
+                    ["{PLAYER}", "{TEAM}"],
+                    [$sender->getName(), $team],
+                    $this->getConfig()->getNested(
+                        "broadcasts.team-created"
+                    )
+                );
 
-            case "accept":
+                $this->getServer()->broadcastMessage($broadcast);
 
-                if(!$this->teamManager->acceptInvite($sender)){
-                    $sender->sendMessage($this->msg("no-invite"));
-                }
+                $this->teamManager->updateNameTag($sender);
 
             break;
 
             case "leave":
 
-                if($this->teamManager->isOwner($sender->getName())){
-                    $sender->sendMessage($this->msg("leader-cannot-leave"));
+                if(!$this->teamManager->hasTeam($sender->getName())){
+                    $sender->sendMessage(
+                        $this->getConfig()->getNested(
+                            "messages.no-team"
+                        )
+                    );
+                    return true;
+                }
+
+                if($this->teamManager->isLeader($sender->getName())){
+                    $sender->sendMessage(
+                        $this->getConfig()->getNested(
+                            "messages.leader-cannot-leave"
+                        )
+                    );
                     return true;
                 }
 
                 $this->teamManager->leaveTeam($sender);
 
+                unset($this->teamChat[$sender->getName()]);
+
                 $sender->sendMessage(
-                    str_replace("{PLAYER}", $sender->getName(), $this->msg("left-team"))
+                    str_replace(
+                        "{PLAYER}",
+                        $sender->getName(),
+                        $this->getConfig()->getNested(
+                            "messages.left-team"
+                        )
+                    )
                 );
+
+                $this->teamManager->updateNameTag($sender);
 
             break;
 
             case "delete":
 
+                if(!$this->teamManager->isLeader($sender->getName())){
+                    $sender->sendMessage(
+                        $this->getConfig()->getNested(
+                            "messages.not-leader"
+                        )
+                    );
+                    return true;
+                }
+
                 $this->deleteConfirm[$sender->getName()] = true;
 
                 $sender->sendMessage(
-                    $this->msg("delete-warning")
+                    $this->getConfig()->getNested(
+                        "messages.delete-warning"
+                    )
                 );
 
             break;
@@ -144,80 +169,49 @@ class Main extends PluginBase implements Listener{
             case "deleteconfirm":
 
                 if(!isset($this->deleteConfirm[$sender->getName()])){
-
                     $sender->sendMessage(
-                        $this->msg("no-pending-delete")
+                        $this->getConfig()->getNested(
+                            "messages.no-pending-delete"
+                        )
                     );
-
                     return true;
                 }
+
+                $team = $this->teamManager->getTeam($sender->getName());
 
                 $this->teamManager->deleteTeam($sender);
 
                 unset($this->deleteConfirm[$sender->getName()]);
+                unset($this->teamChat[$sender->getName()]);
 
-            break;
-
-            case "kick":
-
-                if(!isset($args[1])){
-
-                    $sender->sendMessage(
-                        "§cUsage: /team kick <player>"
-                    );
-
-                    return true;
-                }
-
-                $target = $this->getServer()->getPlayerByPrefix(
-                    $args[1]
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.team-deleted"
+                    )
                 );
 
-                if($target === null){
-
-                    $exact = $this->getServer()->getPlayerExact(
-                        $args[1]
-                    );
-
-                    if($exact === null){
-
-                        $sender->sendMessage(
-                            $this->msg("player-offline-full-name")
-                        );
-
-                        return true;
-                    }
-
-                    $target = $exact;
-                }
-
-                if(!$this->teamManager->sameTeam(
-                    $sender->getName(),
-                    $target->getName()
-                )){
-
-                    $sender->sendMessage(
-                        $this->msg("player-not-in-your-team")
-                    );
-
-                    return true;
-                }
-
-                $this->teamManager->kickPlayer(
-                    $sender,
-                    $target
+                $broadcast = str_replace(
+                    ["{PLAYER}", "{TEAM}"],
+                    [$sender->getName(), $team],
+                    $this->getConfig()->getNested(
+                        "broadcasts.team-deleted"
+                    )
                 );
+
+                $this->getServer()->broadcastMessage($broadcast);
+
+                $this->teamManager->updateNameTag($sender);
 
             break;
 
             case "chat":
 
                 if(!$this->teamManager->hasTeam($sender->getName())){
-
                     $sender->sendMessage(
-                        $this->msg("not-in-team-chat")
+                        $this->getConfig()->getNested(
+                            "messages.not-in-team-chat"
+                        )
                     );
-
                     return true;
                 }
 
@@ -226,7 +220,9 @@ class Main extends PluginBase implements Listener{
                     unset($this->teamChat[$sender->getName()]);
 
                     $sender->sendMessage(
-                        $this->msg("toggled-chat-off")
+                        $this->getConfig()->getNested(
+                            "messages.toggled-chat-off"
+                        )
                     );
 
                 }else{
@@ -234,7 +230,9 @@ class Main extends PluginBase implements Listener{
                     $this->teamChat[$sender->getName()] = true;
 
                     $sender->sendMessage(
-                        $this->msg("toggled-chat-on")
+                        $this->getConfig()->getNested(
+                            "messages.toggled-chat-on"
+                        )
                     );
                 }
 
@@ -244,21 +242,39 @@ class Main extends PluginBase implements Listener{
         return true;
     }
 
-    public function sendHelp(Player $player) : void{
+    private function sendHelp(Player $player) : void{
 
         $player->sendMessage("§8===== §bTeam Help §8=====");
         $player->sendMessage("§b/team create <name>");
-        $player->sendMessage("§b/team invite <player>");
-        $player->sendMessage("§b/team accept");
         $player->sendMessage("§b/team leave");
         $player->sendMessage("§b/team delete");
         $player->sendMessage("§b/team deleteconfirm");
-        $player->sendMessage("§b/team kick <player>");
-        $player->sendMessage("§b/team list");
         $player->sendMessage("§b/team chat");
     }
 
-    public function onDamage(EntityDamageByEntityEvent $event) : void{
+    public function onJoin(PlayerJoinEvent $event) : void{
+        $this->teamManager->updateNameTag($event->getPlayer());
+    }
+
+    public function onDamage(EntityDamageEvent $event) : void{
+
+        $entity = $event->getEntity();
+
+        if($entity instanceof Player){
+            $this->teamManager->updateNameTag($entity);
+        }
+    }
+
+    public function onHeal(EntityRegainHealthEvent $event) : void{
+
+        $entity = $event->getEntity();
+
+        if($entity instanceof Player){
+            $this->teamManager->updateNameTag($entity);
+        }
+    }
+
+    public function onHit(EntityDamageByEntityEvent $event) : void{
 
         $damager = $event->getDamager();
         $entity = $event->getEntity();
@@ -267,51 +283,24 @@ class Main extends PluginBase implements Listener{
             return;
         }
 
-        if($this->teamManager->sameTeam(
-            $damager->getName(),
-            $entity->getName()
-        )){
+        if(
+            $this->teamManager->sameTeam(
+                $damager->getName(),
+                $entity->getName()
+            )
+        ){
+
             $event->cancel();
 
             $damager->sendMessage(
-                $this->msg("friendly-fire")
+                $this->getConfig()->getNested(
+                    "messages.friendly-fire"
+                )
             );
         }
-    }
 
-    public function onJoin(PlayerJoinEvent $event) : void{
-
-        $this->teamManager->updateNameTag(
-            $event->getPlayer()
-        );
-    }
-
-    public function onDamageHealth(EntityDamageEvent $event) : void{
-
-    $entity = $event->getEntity();
-
-    if($entity instanceof Player){
-
+        $this->teamManager->updateNameTag($damager);
         $this->teamManager->updateNameTag($entity);
-    }
-}
-
-public function onHealHealth(EntityRegainHealthEvent $event) : void{
-
-    $entity = $event->getEntity();
-
-    if($entity instanceof Player){
-
-        $this->teamManager->updateNameTag($entity);
-    }
-}
-
-        $entity = $event->getEntity();
-
-        if($entity instanceof Player){
-
-            $this->teamManager->updateNameTag($entity);
-        }
     }
 
     public function onChat(PlayerChatEvent $event) : void{
@@ -326,22 +315,11 @@ public function onHealHealth(EntityRegainHealthEvent $event) : void{
 
         $team = $this->teamManager->getTeam(
             $player->getName()
-        );
+        ) ?? "NoTeam";
 
         $rank = "";
 
-        $pureChat = $this->getServer()
-            ->getPluginManager()
-            ->getPlugin("PureChat");
-
-        if($pureChat instanceof PureChat){
-
-            try{
-                $rank = $pureChat->getNametag($player);
-            }catch(\Throwable $e){
-                $rank = "";
-            }
-        }
+        $message = $event->getMessage();
 
         if(isset($this->teamChat[$player->getName()])){
 
@@ -349,53 +327,41 @@ public function onHealHealth(EntityRegainHealthEvent $event) : void{
                 "chat.team-chat-format"
             );
 
-            $formatted = str_replace(
-                ["{TEAM}", "{PLAYER}", "{MESSAGE}", "{RANK}"],
-                [$team, $player->getName(), $event->getMessage(), $rank],
-                $format
-            );
-
-            foreach($this->getServer()->getOnlinePlayers() as $online){
-
-                if($this->teamManager->sameTeam(
-                    $player->getName(),
-                    $online->getName()
-                )){
-                    $online->sendMessage($formatted);
-                }
-            }
-
-            return;
-        }
-
-        if($team !== null){
-
-            $format = $this->getConfig()->getNested(
-                "chat.public-chat-format"
-            );
-
-            $formatted = str_replace(
-                ["{TEAM}", "{PLAYER}", "{MESSAGE}", "{RANK}"],
-                [$team, $player->getName(), $event->getMessage(), $rank],
-                $format
-            );
-
-        }else{
+        }elseif($team === "NoTeam"){
 
             $format = $this->getConfig()->getNested(
                 "chat.no-team-public-chat-format"
             );
 
-            $formatted = str_replace(
-                ["{PLAYER}", "{MESSAGE}", "{RANK}"],
-                [$player->getName(), $event->getMessage(), $rank],
-                $format
+        }else{
+
+            $format = $this->getConfig()->getNested(
+                "chat.public-chat-format"
             );
         }
 
+        $formatted = str_replace(
+            ["{TEAM}", "{PLAYER}", "{MESSAGE}", "{RANK}"],
+            [$team, $player->getName(), $message, $rank],
+            $format
+        );
+
         foreach($this->getServer()->getOnlinePlayers() as $online){
 
-            $online->sendMessage($formatted);
+            if(isset($this->teamChat[$player->getName()])){
+
+                if(
+                    $this->teamManager->sameTeam(
+                        $player->getName(),
+                        $online->getName()
+                    )
+                ){
+                    $online->sendMessage($formatted);
+                }
+
+            }else{
+                $online->sendMessage($formatted);
+            }
         }
     }
 }
