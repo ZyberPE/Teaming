@@ -864,3 +864,4 @@ public function onCommand(
 
     return true;
 }
+}
