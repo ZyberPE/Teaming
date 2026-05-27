@@ -146,29 +146,30 @@ class Main extends PluginBase implements Listener{
                 $player->getName()
             ) ?? "NoTeam";
 
-        $rank = "";
+$rank = "Player";
 
-        $pureChat = $this->getServer()
-            ->getPluginManager()
-            ->getPlugin("PureChat");
+$pureChat = $this->getServer()
+    ->getPluginManager()
+    ->getPlugin("PureChat");
 
-        if($pureChat !== null){
+if($pureChat !== null){
 
-            try{
+    try{
 
-                $group = $pureChat
-                    ->getUserDataMgr()
-                    ->getGroup($player);
+        $group = $pureChat
+            ->getUserDataMgr()
+            ->getGroup($player);
 
-                if($group !== null){
-                    $rank = "§r" . $group->getName();
-                }
+        if($group !== null){
 
-            }catch(\Throwable $e){
-                $rank = "";
-            }
+            $rank = $group->getName();
         }
 
+    }catch(\Throwable $e){
+
+        $rank = "Player";
+    }
+}
         if(
             isset(
                 $this->teamChat[
