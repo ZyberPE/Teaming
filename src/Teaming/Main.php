@@ -270,252 +270,597 @@ class Main extends PluginBase implements Listener{
         }
     }
 
-    public function onCommand(
-        CommandSender $sender,
-        Command $command,
-        string $label,
-        array $args
-    ) : bool{
+public function onCommand(
+    CommandSender $sender,
+    Command $command,
+    string $label,
+    array $args
+) : bool{
 
-        if(!$sender instanceof Player){
-            return true;
-        }
+    if(!$sender instanceof Player){
+        return true;
+    }
 
-        if(strtolower($command->getName()) !== "team"){
-            return true;
-        }
+    if(strtolower($command->getName()) !== "team"){
+        return true;
+    }
 
-        if(!isset($args[0])){
+    if(!isset($args[0])){
 
-            $sender->sendMessage("§e/team help");
-
-            return true;
-        }
-
-        switch(strtolower($args[0])){
-
-            case "help":
-
-                $sender->sendMessage("§6----- Team Help -----");
-                $sender->sendMessage("§e/team create <name>");
-                $sender->sendMessage("§e/team invite <player>");
-                $sender->sendMessage("§e/team accept");
-                $sender->sendMessage("§e/team leave");
-                $sender->sendMessage("§e/team kick <player>");
-                $sender->sendMessage("§e/team list");
-                $sender->sendMessage("§e/team chat");
-                $sender->sendMessage("§e/team delete");
-                $sender->sendMessage("§e/team deleteconfirm");
-                $sender->sendMessage("§e/team sethome");
-                $sender->sendMessage("§e/team home");
-
-            break;
-
-            case "create":
-
-                if(!isset($args[1])){
-                    return true;
-                }
-
-                if($this->teamManager->hasTeam($sender->getName())){
-
-                    $sender->sendMessage(
-                        $this->getConfig()->getNested(
-                            "messages.already-team"
-                        )
-                    );
-
-                    return true;
-                }
-
-                $team = $args[1];
-
-                if(!$this->teamManager->createTeam($sender, $team)){
-
-                    $sender->sendMessage(
-                        $this->getConfig()->getNested(
-                            "messages.team-exists"
-                        )
-                    );
-
-                    return true;
-                }
-
-                $sender->sendMessage(
-                    $this->getConfig()->getNested(
-                        "messages.team-created"
-                    )
-                );
-
-                $broadcast = $this->getConfig()
-                    ->getNested(
-                        "broadcasts.team-created"
-                    );
-
-                $broadcast = str_replace(
-                    ["{PLAYER}", "{TEAM}"],
-                    [$sender->getName(), $team],
-                    $broadcast
-                );
-
-                $this->getServer()
-                    ->broadcastMessage($broadcast);
-
-            break;
-
-            case "invite":
-
-                if(!isset($args[1])){
-                    return true;
-                }
-
-                if(!$this->teamManager->isLeader($sender->getName())){
-
-                    $sender->sendMessage(
-                        $this->getConfig()->getNested(
-                            "messages.not-leader"
-                        )
-                    );
-
-                    return true;
-                }
-
-                $target = $this->getServer()
-                    ->getPlayerByPrefix($args[1]);
-
-                if($target === null){
-
-                    $sender->sendMessage(
-                        $this->getConfig()->getNested(
-                            "messages.player-not-found"
-                        )
-                    );
-
-                    return true;
-                }
-
-                $team = $this->teamManager
-                    ->getTeam($sender->getName());
-
-                if($this->teamManager->isFull($team)){
-
-                    $sender->sendMessage(
-                        $this->getConfig()->getNested(
-                            "messages.team-full"
-                        )
-                    );
-
-                    return true;
-                }
-
-                $this->teamManager
-                    ->invitePlayer($sender, $target);
-
-                $sender->sendMessage(
-                    str_replace(
-                        "{PLAYER}",
-                        $target->getName(),
-                        $this->getConfig()->getNested(
-                            "messages.invite-sent"
-                        )
-                    )
-                );
-
-                $target->sendMessage(
-                    str_replace(
-                        ["{TEAM}", "{PLAYER}"],
-                        [$team, $sender->getName()],
-                        $this->getConfig()->getNested(
-                            "messages.invited"
-                        )
-                    )
-                );
-
-            break;
-
-            case "accept":
-
-                if(!$this->teamManager->hasInvite($sender->getName())){
-
-                    $sender->sendMessage(
-                        $this->getConfig()->getNested(
-                            "messages.no-invite"
-                        )
-                    );
-
-                    return true;
-                }
-
-                $team = $this->teamManager
-                    ->getInviteTeam($sender->getName());
-
-                $this->teamManager
-                    ->addMember($team, $sender->getName());
-
-                $this->teamManager
-                    ->removeInvite($sender->getName());
-
-                foreach(
-                    $this->teamManager->getMembers($team)
-                    as $member
-                ){
-
-                    $online = $this->getServer()
-                        ->getPlayerExact($member);
-
-                    if($online !== null){
-
-                        $online->sendMessage(
-                            str_replace(
-                                "{PLAYER}",
-                                $sender->getName(),
-                                $this->getConfig()->getNested(
-                                    "messages.joined-team"
-                                )
-                            )
-                        );
-                    }
-                }
-
-            break;
-
-            case "chat":
-
-                if(!$this->teamManager->hasTeam($sender->getName())){
-
-                    $sender->sendMessage(
-                        $this->getConfig()->getNested(
-                            "messages.not-in-team-chat"
-                        )
-                    );
-
-                    return true;
-                }
-
-                if(isset($this->teamChat[strtolower($sender->getName())])){
-
-                    unset($this->teamChat[strtolower($sender->getName())]);
-
-                    $sender->sendMessage(
-                        $this->getConfig()->getNested(
-                            "messages.toggled-chat-off"
-                        )
-                    );
-
-                }else{
-
-                    $this->teamChat[strtolower($sender->getName())] = true;
-
-                    $sender->sendMessage(
-                        $this->getConfig()->getNested(
-                            "messages.toggled-chat-on"
-                        )
-                    );
-                }
-
-            break;
-        }
+        $sender->sendMessage("§e/team help");
 
         return true;
     }
+
+    switch(strtolower($args[0])){
+
+        case "help":
+
+            $sender->sendMessage("§6----- Team Help -----");
+            $sender->sendMessage("§e/team create <name>");
+            $sender->sendMessage("§e/team invite <player>");
+            $sender->sendMessage("§e/team accept");
+            $sender->sendMessage("§e/team leave");
+            $sender->sendMessage("§e/team kick <player>");
+            $sender->sendMessage("§e/team list");
+            $sender->sendMessage("§e/team chat");
+            $sender->sendMessage("§e/team delete");
+            $sender->sendMessage("§e/team deleteconfirm");
+            $sender->sendMessage("§e/team sethome");
+            $sender->sendMessage("§e/team home");
+
+        break;
+
+        case "create":
+
+            if(!isset($args[1])){
+                return true;
+            }
+
+            if($this->teamManager->hasTeam($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.already-team"
+                    )
+                );
+
+                return true;
+            }
+
+            $team = $args[1];
+
+            if(!$this->teamManager->createTeam($sender, $team)){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.team-exists"
+                    )
+                );
+
+                return true;
+            }
+
+            $sender->sendMessage(
+                $this->getConfig()->getNested(
+                    "messages.team-created"
+                )
+            );
+
+            $broadcast = $this->getConfig()
+                ->getNested(
+                    "broadcasts.team-created"
+                );
+
+            $broadcast = str_replace(
+                ["{PLAYER}", "{TEAM}"],
+                [$sender->getName(), $team],
+                $broadcast
+            );
+
+            $this->getServer()->broadcastMessage($broadcast);
+
+        break;
+
+        case "invite":
+
+            if(!isset($args[1])){
+                return true;
+            }
+
+            if(!$this->teamManager->isLeader($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.not-leader"
+                    )
+                );
+
+                return true;
+            }
+
+            $target = $this->getServer()
+                ->getPlayerByPrefix($args[1]);
+
+            if($target === null){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.player-not-found"
+                    )
+                );
+
+                return true;
+            }
+
+            $team = $this->teamManager
+                ->getTeam($sender->getName());
+
+            if($this->teamManager->isFull($team)){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.team-full"
+                    )
+                );
+
+                return true;
+            }
+
+            $this->teamManager
+                ->invitePlayer($sender, $target);
+
+            $sender->sendMessage(
+                str_replace(
+                    "{PLAYER}",
+                    $target->getName(),
+                    $this->getConfig()->getNested(
+                        "messages.invite-sent"
+                    )
+                )
+            );
+
+            $target->sendMessage(
+                str_replace(
+                    ["{TEAM}", "{PLAYER}"],
+                    [$team, $sender->getName()],
+                    $this->getConfig()->getNested(
+                        "messages.invited"
+                    )
+                )
+            );
+
+        break;
+
+        case "accept":
+
+            if(!$this->teamManager->hasInvite($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.no-invite"
+                    )
+                );
+
+                return true;
+            }
+
+            $team = $this->teamManager
+                ->getInviteTeam($sender->getName());
+
+            $this->teamManager
+                ->addMember($team, $sender->getName());
+
+            $this->teamManager
+                ->removeInvite($sender->getName());
+
+            foreach(
+                $this->teamManager->getMembers($team)
+                as $member
+            ){
+
+                $online = $this->getServer()
+                    ->getPlayerExact($member);
+
+                if($online !== null){
+
+                    $online->sendMessage(
+                        str_replace(
+                            "{PLAYER}",
+                            $sender->getName(),
+                            $this->getConfig()->getNested(
+                                "messages.joined-team"
+                            )
+                        )
+                    );
+                }
+            }
+
+        break;
+
+        case "leave":
+
+            if(!$this->teamManager->hasTeam($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.no-team"
+                    )
+                );
+
+                return true;
+            }
+
+            if($this->teamManager->isLeader($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.leader-cannot-leave"
+                    )
+                );
+
+                return true;
+            }
+
+            $team = $this->teamManager
+                ->getTeam($sender->getName());
+
+            $this->teamManager
+                ->removeMember(
+                    $team,
+                    $sender->getName()
+                );
+
+            unset(
+                $this->teamChat[
+                    strtolower($sender->getName())
+                ]
+            );
+
+            $sender->sendMessage(
+                str_replace(
+                    "{PLAYER}",
+                    $sender->getName(),
+                    $this->getConfig()->getNested(
+                        "messages.left-team"
+                    )
+                )
+            );
+
+        break;
+
+        case "kick":
+
+            if(!isset($args[1])){
+                return true;
+            }
+
+            if(!$this->teamManager->isLeader($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.not-leader"
+                    )
+                );
+
+                return true;
+            }
+
+            $targetName = $args[1];
+
+            if(
+                strtolower($targetName)
+                === strtolower($sender->getName())
+            ){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.cannot-kick-self"
+                    )
+                );
+
+                return true;
+            }
+
+            if(
+                !$this->teamManager->sameTeam(
+                    $sender->getName(),
+                    $targetName
+                )
+            ){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.player-not-in-team"
+                    )
+                );
+
+                return true;
+            }
+
+            $team = $this->teamManager
+                ->getTeam($sender->getName());
+
+            $this->teamManager
+                ->removeMember(
+                    $team,
+                    $targetName
+                );
+
+            unset(
+                $this->teamChat[
+                    strtolower($targetName)
+                ]
+            );
+
+            $sender->sendMessage(
+                str_replace(
+                    "{PLAYER}",
+                    $targetName,
+                    $this->getConfig()->getNested(
+                        "messages.kicked-player"
+                    )
+                )
+            );
+
+            $target = $this->getServer()
+                ->getPlayerExact($targetName);
+
+            if($target !== null){
+
+                $target->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.kicked-message"
+                    )
+                );
+            }
+
+        break;
+
+        case "list":
+
+            if(!$this->teamManager->hasTeam($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.no-team"
+                    )
+                );
+
+                return true;
+            }
+
+            $team = $this->teamManager
+                ->getTeam($sender->getName());
+
+            $members = $this->teamManager
+                ->getMembers($team);
+
+            $sender->sendMessage(
+                "§6Team Members: §f" .
+                implode(", ", $members)
+            );
+
+        break;
+
+        case "chat":
+
+            if(!$this->teamManager->hasTeam($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.not-in-team-chat"
+                    )
+                );
+
+                return true;
+            }
+
+            if(isset(
+                $this->teamChat[
+                    strtolower($sender->getName())
+                ]
+            )){
+
+                unset(
+                    $this->teamChat[
+                        strtolower($sender->getName())
+                    ]
+                );
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.toggled-chat-off"
+                    )
+                );
+
+            }else{
+
+                $this->teamChat[
+                    strtolower($sender->getName())
+                ] = true;
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.toggled-chat-on"
+                    )
+                );
+            }
+
+        break;
+
+        case "delete":
+
+            if(!$this->teamManager->isLeader($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.not-leader"
+                    )
+                );
+
+                return true;
+            }
+
+            $this->deleteConfirm[
+                strtolower($sender->getName())
+            ] = true;
+
+            $sender->sendMessage(
+                $this->getConfig()->getNested(
+                    "messages.delete-warning"
+                )
+            );
+
+        break;
+
+        case "deleteconfirm":
+
+            if(!isset(
+                $this->deleteConfirm[
+                    strtolower($sender->getName())
+                ]
+            )){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.no-pending-delete"
+                    )
+                );
+
+                return true;
+            }
+
+            $team = $this->teamManager
+                ->getTeam($sender->getName());
+
+            foreach(
+                $this->teamManager->getMembers($team)
+                as $member
+            ){
+
+                unset(
+                    $this->teamChat[
+                        strtolower($member)
+                    ]
+                );
+            }
+
+            $this->teamManager
+                ->deleteTeam($team);
+
+            unset(
+                $this->deleteConfirm[
+                    strtolower($sender->getName())
+                ]
+            );
+
+            $sender->sendMessage(
+                $this->getConfig()->getNested(
+                    "messages.team-deleted"
+                )
+            );
+
+            $broadcast = $this->getConfig()
+                ->getNested(
+                    "broadcasts.team-deleted"
+                );
+
+            $broadcast = str_replace(
+                ["{PLAYER}", "{TEAM}"],
+                [$sender->getName(), $team],
+                $broadcast
+            );
+
+            $this->getServer()
+                ->broadcastMessage($broadcast);
+
+        break;
+
+        case "sethome":
+
+            if(!$this->teamManager->isLeader($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.not-leader"
+                    )
+                );
+
+                return true;
+            }
+
+            $team = $this->teamManager
+                ->getTeam($sender->getName());
+
+            $this->teamManager->setHome(
+                $team,
+                $sender->getPosition()
+            );
+
+            $sender->sendMessage(
+                $this->getConfig()->getNested(
+                    "messages.home-set"
+                )
+            );
+
+        break;
+
+        case "home":
+
+            if(!$this->teamManager->hasTeam($sender->getName())){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.no-team"
+                    )
+                );
+
+                return true;
+            }
+
+            $team = $this->teamManager
+                ->getTeam($sender->getName());
+
+            $home = $this->teamManager
+                ->getHome($team);
+
+            if($home === null){
+
+                $sender->sendMessage(
+                    $this->getConfig()->getNested(
+                        "messages.no-home"
+                    )
+                );
+
+                return true;
+            }
+
+            $world = $this->getServer()
+                ->getWorldManager()
+                ->getWorldByName($home["world"]);
+
+            if($world === null){
+                return true;
+            }
+
+            $sender->teleport(
+                new Position(
+                    $home["x"],
+                    $home["y"],
+                    $home["z"],
+                    $world
+                )
+            );
+
+            $sender->sendMessage(
+                $this->getConfig()->getNested(
+                    "messages.home-teleport"
+                )
+            );
+
+        break;
+    }
+
+    return true;
 }
