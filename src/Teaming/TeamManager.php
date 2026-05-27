@@ -249,8 +249,7 @@ class TeamManager{
 
 $rank = "Player";
 
-$pureChat = $this->plugin
-    ->getServer()
+$pureChat = $this->getServer()
     ->getPluginManager()
     ->getPlugin("PureChat");
 
@@ -258,14 +257,14 @@ if($pureChat !== null){
 
     try{
 
-        $group = $pureChat
-            ->getUserDataMgr()
-            ->getGroup($player);
+        $rank = $pureChat
+            ->getNametag($player);
 
-        if($group !== null){
-
-            $rank = $group->getName();
-        }
+        $rank = str_replace(
+            ["{display_name}", "{msg}"],
+            "",
+            $rank
+        );
 
     }catch(\Throwable $e){
 
